@@ -1,4 +1,7 @@
 Revision history for Perl extension Rest-Client-Builder
 
+0.02    Tue, 04 Nov 2014 15:07:00 +0300
+        - Fix pod
+
 0.01    Tue, 04 Nov 2014 13:35:00 +0300
         - Initial release

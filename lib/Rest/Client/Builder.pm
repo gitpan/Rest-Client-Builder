@@ -3,7 +3,7 @@ package Rest::Client::Builder;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 our $AUTOLOAD;
 
 sub new {
@@ -171,6 +171,7 @@ Alexey A. Komarov <alexkom@cpan.org>
 2014 Alexey A. Komarov
 
 =head1 LICENSE
+
 This library is free software; you may redistribute it and/or modify it under the same terms as Perl itself.
 
 =cut
