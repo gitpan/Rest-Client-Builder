@@ -3,7 +3,7 @@ package Rest::Client::Builder;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 our $AUTOLOAD;
 
 sub new {
@@ -34,10 +34,9 @@ sub _construct {
 
 	unless ($self->{objects}->{$id}) {
 		$self->{objects}->{$id} = bless(Rest::Client::Builder->new($self->{opts}, $path), $class);
+		no strict 'refs';
+		push @{$class . '::ISA'}, 'Rest::Client::Builder';
 	}
-
-	no strict 'refs';
-	push @{$class . '::ISA'}, ref($self);
 
 	return $self->{objects}->{$id};
 }
@@ -59,33 +58,33 @@ sub AUTOLOAD {
 }
 
 sub get {
-	my ($self, $args) = @_;
-	return $self->{on_request}->('GET', $self->{path}, $args);
+	my $self = shift;
+	return $self->{on_request}->('GET', $self->{path}, @_);
 }
 
 sub post {
-	my ($self, $args) = @_;
-	return $self->{on_request}->('POST', $self->{path}, $args);
+	my $self = shift;
+	return $self->{on_request}->('POST', $self->{path}, @_);
 }
 
 sub put {
-	my ($self, $args) = @_;
-	return $self->{on_request}->('PUT', $self->{path}, $args);
+	my $self = shift;
+	return $self->{on_request}->('PUT', $self->{path}, @_);
 }
 
 sub delete {
-	my ($self, $args) = @_;
-	return $self->{on_request}->('DELETE', $self->{path}, $args);
+	my $self = shift;
+	return $self->{on_request}->('DELETE', $self->{path}, @_);
 }
 
 sub patch {
-	my ($self, $args) = @_;
-	return $self->{on_request}->('PATCH', $self->{path}, $args);
+	my $self = shift;
+	return $self->{on_request}->('PATCH', $self->{path}, @_);
 }
 
 sub head {
-	my ($self, $args) = @_;
-	return $self->{on_request}->('HEAD', $self->{path}, $args);
+	my $self = shift;
+	return $self->{on_request}->('HEAD', $self->{path}, @_);
 }
 
 1;
@@ -98,9 +97,7 @@ Rest::Client::Builder - Base class to build simple object-oriented REST clients
 
 =head1 SYNOPSIS
 
-	use Rest::Client::Builder;
-
-	package Your::API::Class;
+	package Your::API;
 	use base qw(Rest::Client::Builder);
 	use JSON;
 
@@ -118,25 +115,82 @@ Rest::Client::Builder - Base class to build simple object-oriented REST clients
 
 	sub request {
 		my ($self, $method, $path, $args) = @_;
-		print sprintf("%s %s %s\n", $method, $path, encode_json($args));
+		return sprintf("%s %s %s\n", $method, $path, encode_json($args));
 	}
 
-	my $api = Your::API::Class->new();
-	$api->resource->get({ value => 1 });
+	my $api = Your::API->new();
+	print $api->resource->get({ value => 1 });
 	# output: GET http://hostname/api/resource {"value":1}
 
-	$api->resource(10)->post({ value => 1 });
+	print $api->resource(10)->post({ value => 1 });
 	# output: POST http://hostname/api/resource/10 {"value":1}
 
-	$api->resource(10)->subresource('alfa', 'beta')->state->put({ value => 1 });
+	print $api->resource(10)->subresource('alfa', 'beta')->state->put({ value => 1 });
 	# output: PUT http://hostname/api/resource/10/subresource/alfa/beta/state {"value":1}
 
-	$api->resource(10)->delete->();
+	print $api->resource(10)->subresource->alfa('beta')->state->put({ value => 1 });
+	# output: PUT http://hostname/api/resource/10/subresource/alfa/beta/state {"value":1}
+
+	print $api->resource(10)->subresource->alfa->beta->state->put({ value => 1 });
+	# output: PUT http://hostname/api/resource/10/subresource/alfa/beta/state {"value":1}
+
+	print $api->resource(10)->delete();
 	# output: DELETE http://hostname/api/resource/10
+
+=head1 METHODS
+
+	get put post delete patch head
+
+=head1 ADDITIONAL ARGUMENTS
+
+You can pass any additionals arguments to the on_request callback:
+
+	sub request {
+		my ($self, $method, $path, $args, $opts) = @_;
+	}
+
+	my $api = Your::API->new();
+	$api->resource->get({ value => 1 }, { timeout => 1 });
+
+=head1 INHERITANCE
+
+You can override any methods of any API object:
+
+	package Your::API;
+	use base qw(Rest::Client::Builder);
+	use JSON;
+
+	sub new {
+		my ($class) = @_;
+
+		my $self;
+		$self = $class->SUPER::new({
+			on_request => sub {
+				return $self->request(@_);
+			},
+		}, 'http://hostname/api');
+		return bless($self, $class);
+	};
+
+	sub request {
+		my ($self, $method, $path, $args) = @_;
+		return encode_json($args);
+	}
+
+	package Your::API::resource::state;
+	sub post {
+		my ($self, $args) = (shift, shift);
+		$args->{force} = 1;
+		return $self->SUPER::post($args, @_);
+	}
+
+	my $api = Your::API->new();
+	print $api->resource(1)->state->post();
+	# output: {"force":1}
 
 =head1 SEE ALSO
 
-L<WWW::REST>
+L<WWW::REST> L<REST::Client>
 
 =head1 SUPPORT
 
